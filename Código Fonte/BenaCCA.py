@@ -11,6 +11,7 @@ O programa reúne em um único arquivo:
 from __future__ import annotations
 
 import ctypes
+import os
 import sys
 import tkinter as tk
 from dataclasses import dataclass
@@ -54,6 +55,7 @@ class BodeNavigationToolbar(NavigationToolbar2Tk):
 # =============================================================================
 
 FilterKind = Literal["LPF", "HPF"]
+BodeTheme = Literal["light", "dark"]
 
 # Tabela 1 do enunciado. Os valores escritos em mH são convertidos para H.
 COMMERCIAL_INDUCTORS_H = np.array(
@@ -455,6 +457,7 @@ def calculate_project(
 def build_bode_figure(
     project: ProjectResult,
     figsize: tuple[float, float] = (12.5, 7.2),
+    theme: BodeTheme = "light",
 ) -> Figure:
     """Cria o Bode completo: magnitude e fase dos dois filtros."""
 
@@ -463,8 +466,35 @@ def build_bode_figure(
         np.log10(project.cutoff_hz * 20.0),
         1000,
     )
+    palettes = {
+        "light": {
+            "figure": "white",
+            "axes": "white",
+            "text": "#172033",
+            "muted": "#64748b",
+            "grid": "#cbd5e1",
+            "spine": "#cbd5e1",
+            "legend": "white",
+            "legend_edge": "#cbd5e1",
+            "ideal": "#2563eb",
+            "commercial": "#f97316",
+        },
+        "dark": {
+            "figure": "#101114",
+            "axes": "#181A20",
+            "text": "#F3F4F6",
+            "muted": "#A7B0C0",
+            "grid": "#343946",
+            "spine": "#3F4656",
+            "legend": "#22252D",
+            "legend_edge": "#343946",
+            "ideal": "#60A5FA",
+            "commercial": "#FDBA74",
+        },
+    }
+    palette = palettes[theme]
     # Margens fixas mantêm o layout estável e deixam a interação mais leve.
-    figure = Figure(figsize=figsize, dpi=100)
+    figure = Figure(figsize=figsize, dpi=100, facecolor=palette["figure"])
     figure.subplots_adjust(
         left=0.075,
         right=0.98,
@@ -474,6 +504,11 @@ def build_bode_figure(
         hspace=0.40,
     )
     axes = figure.subplots(2, 2, sharex="col")
+    for axis in axes.flat:
+        axis.set_facecolor(palette["axes"])
+        axis.tick_params(axis="both", which="both", colors=palette["muted"])
+        for spine in axis.spines.values():
+            spine.set_color(palette["spine"])
 
     for row, result in enumerate((project.lpf, project.hpf)):
         ideal_response = transfer_response(
@@ -501,14 +536,14 @@ def build_bode_figure(
         ideal_magnitude_line = magnitude_axis.semilogx(
             frequencies,
             ideal_magnitude,
-            color="#2563eb",
+            color=palette["ideal"],
             linewidth=2.2,
             label="Componentes ideais",
         )[0]
         commercial_magnitude_line = magnitude_axis.semilogx(
             frequencies,
             commercial_magnitude,
-            color="#f97316",
+            color=palette["commercial"],
             linewidth=2.0,
             linestyle="--",
             label="Componentes comerciais",
@@ -517,39 +552,44 @@ def build_bode_figure(
         commercial_magnitude_line.set_gid("bode:Comercial")
         magnitude_axis.axhline(
             -10.0 * np.log10(2.0),
-            color="#64748b",
+            color=palette["muted"],
             linewidth=1.0,
             linestyle=":",
             label="-3,01 dB",
         )
         magnitude_axis.axvline(
-            project.cutoff_hz, color="#2563eb", linewidth=1.0, alpha=0.55
+            project.cutoff_hz, color=palette["ideal"], linewidth=1.0, alpha=0.65
         )
         magnitude_axis.axvline(
             result.commercial_cutoff_hz,
-            color="#f97316",
+            color=palette["commercial"],
             linewidth=1.0,
-            alpha=0.65,
+            alpha=0.70,
         )
-        magnitude_axis.set_title(
+        magnitude_title = magnitude_axis.set_title(
             f"{result.name} — {result.destination} | Magnitude", loc="left"
         )
-        magnitude_axis.set_ylabel("Magnitude (dB)")
+        magnitude_title.set_color(palette["text"])
+        magnitude_axis.set_ylabel("Magnitude (dB)", color=palette["text"])
         magnitude_axis.set_ylim(-55, 5)
-        magnitude_axis.grid(True, which="both", color="#cbd5e1", alpha=0.55)
-        magnitude_axis.legend(loc="best", fontsize=8)
+        magnitude_axis.grid(True, which="both", color=palette["grid"], alpha=0.55)
+        magnitude_legend = magnitude_axis.legend(loc="best", fontsize=8)
+        magnitude_legend.get_frame().set_facecolor(palette["legend"])
+        magnitude_legend.get_frame().set_edgecolor(palette["legend_edge"])
+        for label in magnitude_legend.get_texts():
+            label.set_color(palette["text"])
 
         ideal_phase_line = phase_axis.semilogx(
             frequencies,
             ideal_phase,
-            color="#2563eb",
+            color=palette["ideal"],
             linewidth=2.2,
             label="Componentes ideais",
         )[0]
         commercial_phase_line = phase_axis.semilogx(
             frequencies,
             commercial_phase,
-            color="#f97316",
+            color=palette["commercial"],
             linewidth=2.0,
             linestyle="--",
             label="Componentes comerciais",
@@ -557,29 +597,39 @@ def build_bode_figure(
         ideal_phase_line.set_gid("bode:Ideal")
         commercial_phase_line.set_gid("bode:Comercial")
         phase_axis.axvline(
-            project.cutoff_hz, color="#2563eb", linewidth=1.0, alpha=0.55
+            project.cutoff_hz, color=palette["ideal"], linewidth=1.0, alpha=0.65
         )
         phase_axis.axvline(
             result.commercial_cutoff_hz,
-            color="#f97316",
+            color=palette["commercial"],
             linewidth=1.0,
-            alpha=0.65,
+            alpha=0.70,
         )
-        phase_axis.set_title(
+        phase_title = phase_axis.set_title(
             f"{result.name} — {result.destination} | Fase", loc="left"
         )
-        phase_axis.set_ylabel("Fase (graus)")
-        phase_axis.grid(True, which="both", color="#cbd5e1", alpha=0.55)
-        phase_axis.legend(loc="best", fontsize=8)
+        phase_title.set_color(palette["text"])
+        phase_axis.set_ylabel("Fase (graus)", color=palette["text"])
+        phase_axis.grid(True, which="both", color=palette["grid"], alpha=0.55)
+        phase_legend = phase_axis.legend(loc="best", fontsize=8)
+        phase_legend.get_frame().set_facecolor(palette["legend"])
+        phase_legend.get_frame().set_edgecolor(palette["legend_edge"])
+        for label in phase_legend.get_texts():
+            label.set_color(palette["text"])
 
     axes[1, 0].set_xlabel("Frequência (Hz)")
     axes[1, 1].set_xlabel("Frequência (Hz)")
-    figure.suptitle(
+    for axis in axes.flat:
+        axis.xaxis.label.set_color(palette["text"])
+        axis.yaxis.label.set_color(palette["text"])
+
+    figure_title = figure.suptitle(
         f"BenaCCA — Bode completo ideal × comercial | {project.cutoff_hz:g} Hz, "
         f"{project.load_ohm:g} Ω",
         fontsize=14,
         fontweight="bold",
     )
+    figure_title.set_color(palette["text"])
     return figure
 
 
@@ -589,7 +639,12 @@ def save_bode_figure(project: ProjectResult, output_path: str | Path) -> Path:
     output = Path(output_path)
     output.parent.mkdir(parents=True, exist_ok=True)
     figure = build_bode_figure(project)
-    figure.savefig(output, dpi=180, bbox_inches="tight", facecolor="white")
+    figure.savefig(
+        output,
+        dpi=180,
+        bbox_inches="tight",
+        facecolor=figure.get_facecolor(),
+    )
     return output
 
 
@@ -902,14 +957,20 @@ class BenaCCAApp(tk.Tk):
     """Janela principal do software BenaCCA."""
 
     COLORS = {
-        "navy": "#16324F",
-        "blue": "#2563EB",
-        "orange": "#F97316",
-        "bg": "#EAF0F6",
-        "card": "#FFFFFF",
-        "text": "#172033",
-        "muted": "#5B6878",
-        "line": "#CBD5E1",
+        "header": "#0B0D12",
+        "navy": "#DDE8FF",
+        "blue": "#3B82F6",
+        "orange": "#FDBA74",
+        "bg": "#101114",
+        "card": "#181A20",
+        "card_soft": "#22252D",
+        "input": "#111318",
+        "text": "#F3F4F6",
+        "muted": "#A7B0C0",
+        "line": "#343946",
+        "status": "#151821",
+        "analysis_bg": "#2A1A10",
+        "analysis_text": "#FFD7A6",
     }
 
     def __init__(self) -> None:
@@ -967,25 +1028,31 @@ class BenaCCAApp(tk.Tk):
 
         style = ttk.Style(self)
         style.theme_use("clam")
-        style.configure(".", font=("Segoe UI", 10))
+        style.configure(
+            ".",
+            font=("Segoe UI", 10),
+            background=self.COLORS["bg"],
+            foreground=self.COLORS["text"],
+        )
         style.configure("App.TFrame", background=self.COLORS["bg"])
         style.configure("Card.TFrame", background=self.COLORS["card"])
+        style.configure("TSeparator", background=self.COLORS["line"])
         style.configure(
             "Title.TLabel",
-            background=self.COLORS["navy"],
+            background=self.COLORS["header"],
             foreground="white",
             font=("Segoe UI Semibold", 22),
         )
         style.configure(
             "Subtitle.TLabel",
-            background=self.COLORS["navy"],
-            foreground="#D9E6F2",
+            background=self.COLORS["header"],
+            foreground=self.COLORS["muted"],
             font=("Segoe UI", 10),
         )
         style.configure(
             "CardTitle.TLabel",
             background=self.COLORS["card"],
-            foreground=self.COLORS["navy"],
+            foreground=self.COLORS["blue"],
             font=("Segoe UI Semibold", 13),
         )
         style.configure(
@@ -1009,21 +1076,64 @@ class BenaCCAApp(tk.Tk):
         )
         style.map(
             "Primary.TButton",
-            background=[("active", "#1D4ED8"), ("disabled", "#93A4BA")],
+            background=[("active", "#2563EB"), ("disabled", "#2E3542")],
             foreground=[
-                ("disabled", "#243B53"),
+                ("disabled", self.COLORS["muted"]),
                 ("active", "white"),
                 ("!disabled", "white"),
             ],
         )
         style.configure(
             "Secondary.TButton",
-            background="#DCE6F0",
-            foreground=self.COLORS["navy"],
+            background=self.COLORS["card_soft"],
+            foreground=self.COLORS["text"],
             padding=(13, 7),
             borderwidth=0,
         )
-        style.map("Secondary.TButton", background=[("active", "#CBD8E6")])
+        style.map(
+            "Secondary.TButton",
+            background=[("active", "#2E3542"), ("disabled", self.COLORS["card"])],
+            foreground=[
+                ("disabled", self.COLORS["muted"]),
+                ("!disabled", self.COLORS["text"]),
+            ],
+        )
+        style.configure(
+            "TEntry",
+            fieldbackground=self.COLORS["input"],
+            foreground=self.COLORS["text"],
+            insertcolor=self.COLORS["text"],
+            bordercolor=self.COLORS["line"],
+            lightcolor=self.COLORS["line"],
+            darkcolor=self.COLORS["line"],
+            padding=(8, 5),
+        )
+        style.map(
+            "TEntry",
+            fieldbackground=[
+                ("focus", "#151922"),
+                ("disabled", self.COLORS["card_soft"]),
+            ],
+            foreground=[
+                ("disabled", self.COLORS["muted"]),
+                ("!disabled", self.COLORS["text"]),
+            ],
+            bordercolor=[("focus", self.COLORS["blue"])],
+        )
+        style.configure(
+            "Vertical.TScrollbar",
+            background=self.COLORS["card_soft"],
+            troughcolor=self.COLORS["card"],
+            bordercolor=self.COLORS["card"],
+            arrowcolor=self.COLORS["muted"],
+            lightcolor=self.COLORS["card"],
+            darkcolor=self.COLORS["card"],
+        )
+        style.map(
+            "Vertical.TScrollbar",
+            background=[("active", self.COLORS["line"])],
+            arrowcolor=[("active", self.COLORS["text"])],
+        )
         # Remove o indicador de foco padrão e aplica o estilo das abas.
         style.layout(
             "Bena.TNotebook.Tab",
@@ -1059,7 +1169,7 @@ class BenaCCAApp(tk.Tk):
         )
         style.configure(
             "Bena.TNotebook.Tab",
-            background="#DCE6F0",
+            background=self.COLORS["card_soft"],
             foreground=self.COLORS["muted"],
             borderwidth=0,
             padding=(24, 12),
@@ -1069,38 +1179,47 @@ class BenaCCAApp(tk.Tk):
             "Bena.TNotebook.Tab",
             background=[
                 ("selected", self.COLORS["blue"]),
-                ("active", "#C9D8E8"),
+                ("active", "#2E3542"),
             ],
             foreground=[
                 ("selected", "white"),
-                ("active", self.COLORS["navy"]),
+                ("active", self.COLORS["text"]),
             ],
             padding=[("selected", (26, 12))],
         )
         style.configure(
             "Treeview",
             rowheight=31,
-            background="white",
-            fieldbackground="white",
+            background=self.COLORS["input"],
+            fieldbackground=self.COLORS["input"],
             foreground=self.COLORS["text"],
+            bordercolor=self.COLORS["line"],
+            lightcolor=self.COLORS["line"],
+            darkcolor=self.COLORS["line"],
         )
         style.configure(
             "Treeview.Heading",
-            background=self.COLORS["navy"],
+            background=self.COLORS["card_soft"],
             foreground="white",
             font=("Segoe UI Semibold", 9),
             padding=7,
+            bordercolor=self.COLORS["line"],
         )
-        style.map("Treeview.Heading", background=[("active", "#244766")])
+        style.map(
+            "Treeview",
+            background=[("selected", self.COLORS["blue"])],
+            foreground=[("selected", "white")],
+        )
+        style.map("Treeview.Heading", background=[("active", "#2E3542")])
 
     def build_layout(self) -> None:
         """Monta o cabeçalho, o painel de entrada e a área de resultados."""
 
-        header = tk.Frame(self, bg=self.COLORS["navy"])
+        header = tk.Frame(self, bg=self.COLORS["header"])
         header.pack(fill="x")
-        header_inner = tk.Frame(header, bg=self.COLORS["navy"])
+        header_inner = tk.Frame(header, bg=self.COLORS["header"])
         header_inner.pack(fill="x", padx=28, pady=(12, 11))
-        title_box = tk.Frame(header_inner, bg=self.COLORS["navy"])
+        title_box = tk.Frame(header_inner, bg=self.COLORS["header"])
         title_box.pack(side="left")
         ttk.Label(title_box, text="BenaCCA", style="Title.TLabel").pack(
             anchor="w"
@@ -1112,7 +1231,7 @@ class BenaCCAApp(tk.Tk):
         ).pack(anchor="w")
 
         # Botão necessário enquanto a barra de título fica oculta.
-        window_controls = tk.Frame(header_inner, bg=self.COLORS["navy"])
+        window_controls = tk.Frame(header_inner, bg=self.COLORS["header"])
         window_controls.pack(side="right", anchor="center")
         tk.Button(
             window_controls,
@@ -1141,8 +1260,8 @@ class BenaCCAApp(tk.Tk):
         status = tk.Label(
             self,
             textvariable=self.status_var,
-            bg="#DDE7F1",
-            fg=self.COLORS["navy"],
+            bg=self.COLORS["status"],
+            fg=self.COLORS["muted"],
             anchor="w",
             padx=22,
             pady=8,
@@ -1191,7 +1310,7 @@ class BenaCCAApp(tk.Tk):
                 "HPF: C série + L paralelo\n"
                 "Resposta: Butterworth, 2ª ordem"
             ),
-            bg="#F1F5F9",
+            bg=self.COLORS["card_soft"],
             fg=self.COLORS["text"],
             justify="left",
             anchor="w",
@@ -1312,7 +1431,7 @@ class BenaCCAApp(tk.Tk):
         ):
             card = tk.Frame(
                 summary_frame,
-                bg="#F1F5F9",
+                bg=self.COLORS["card_soft"],
                 highlightbackground=self.COLORS["line"],
                 highlightthickness=1,
             )
@@ -1325,15 +1444,15 @@ class BenaCCAApp(tk.Tk):
             tk.Label(
                 card,
                 text=title,
-                bg="#F1F5F9",
+                bg=self.COLORS["card_soft"],
                 fg=self.COLORS["muted"],
                 font=("Segoe UI", 9),
             ).pack(anchor="w", padx=12, pady=(10, 2))
             value_label = tk.Label(
                 card,
                 text="—",
-                bg="#F1F5F9",
-                fg=self.COLORS["navy"],
+                bg=self.COLORS["card_soft"],
+                fg=self.COLORS["orange"],
                 font=("Segoe UI Semibold", 15),
             )
             value_label.pack(anchor="w", padx=12, pady=(0, 10))
@@ -1342,8 +1461,8 @@ class BenaCCAApp(tk.Tk):
         self.analysis_label = tk.Label(
             self.results_tab,
             text="Os resultados e a análise crítica aparecerão aqui.",
-            bg="#FFF7ED",
-            fg="#7C2D12",
+            bg=self.COLORS["analysis_bg"],
+            fg=self.COLORS["analysis_text"],
             justify="left",
             anchor="nw",
             wraplength=760,
@@ -1405,8 +1524,11 @@ class BenaCCAApp(tk.Tk):
             container,
             wrap="word",
             yscrollcommand=scrollbar.set,
-            bg="#FFFFFF",
+            bg=self.COLORS["input"],
             fg=self.COLORS["text"],
+            insertbackground=self.COLORS["text"],
+            selectbackground=self.COLORS["blue"],
+            selectforeground="white",
             relief="flat",
             borderwidth=0,
             padx=18,
@@ -1421,7 +1543,7 @@ class BenaCCAApp(tk.Tk):
 
         self.methodology_text.tag_configure(
             "title",
-            foreground=self.COLORS["navy"],
+            foreground=self.COLORS["text"],
             font=("Segoe UI Semibold", 16),
             spacing3=10,
         )
@@ -1434,8 +1556,8 @@ class BenaCCAApp(tk.Tk):
         )
         self.methodology_text.tag_configure(
             "equation",
-            background="#F1F5F9",
-            foreground=self.COLORS["navy"],
+            background=self.COLORS["card_soft"],
+            foreground=self.COLORS["text"],
             font=("Consolas", 10),
             lmargin1=14,
             lmargin2=14,
@@ -1630,13 +1752,18 @@ class BenaCCAApp(tk.Tk):
             self.graph_toolbar = None
 
         # O canvas começa pequeno e depois acompanha o espaço disponível na aba.
-        figure = build_bode_figure(self.project, figsize=(6.4, 4.8))
+        figure = build_bode_figure(self.project, figsize=(6.4, 4.8), theme="dark")
         self.figure_canvas = FigureCanvasTkAgg(
             figure,
             master=self.graph_canvas_frame,
         )
         canvas_widget = self.figure_canvas.get_tk_widget()
-        canvas_widget.configure(width=1, height=1, highlightthickness=0)
+        canvas_widget.configure(
+            width=1,
+            height=1,
+            highlightthickness=0,
+            background=self.COLORS["card"],
+        )
         canvas_widget.grid(row=0, column=0, sticky="nsew")
 
         self.graph_toolbar = BodeNavigationToolbar(
@@ -1645,6 +1772,7 @@ class BenaCCAApp(tk.Tk):
             pack_toolbar=False,
         )
         self.graph_toolbar.update()
+        self.style_graph_toolbar()
         self.graph_toolbar.pack(fill="x")
 
         self.enable_graph_interaction()
@@ -1684,6 +1812,58 @@ class BenaCCAApp(tk.Tk):
         )
         self.figure_canvas.draw_idle()
 
+    def style_graph_toolbar(self) -> None:
+        """Aplica o modo noturno aos controles nativos da barra do Matplotlib."""
+
+        if self.graph_toolbar is None:
+            return
+
+        def apply_theme(widget: tk.Misc) -> None:
+            widget_class = widget.winfo_class()
+            options: dict[str, object] = {}
+            if widget_class in {"Frame", "Labelframe"}:
+                options = {"background": self.COLORS["card"]}
+            elif widget_class in {"Button", "Checkbutton"}:
+                options = {
+                    "background": self.COLORS["card_soft"],
+                    "foreground": self.COLORS["text"],
+                    "activebackground": self.COLORS["line"],
+                    "activeforeground": self.COLORS["text"],
+                    "disabledforeground": self.COLORS["muted"],
+                    "borderwidth": 0,
+                    "highlightthickness": 0,
+                    "relief": "flat",
+                }
+                if widget_class == "Checkbutton":
+                    options["selectcolor"] = self.COLORS["card_soft"]
+            elif widget_class == "Label":
+                options = {
+                    "background": self.COLORS["card"],
+                    "foreground": self.COLORS["muted"],
+                }
+            elif widget_class == "Entry":
+                options = {
+                    "background": self.COLORS["input"],
+                    "foreground": self.COLORS["text"],
+                    "insertbackground": self.COLORS["text"],
+                    "relief": "flat",
+                }
+
+            if options:
+                try:
+                    widget.configure(**options)
+                except tk.TclError:
+                    pass
+            if (
+                widget_class in {"Button", "Checkbutton"}
+                and getattr(widget, "_image_file", None) is not None
+            ):
+                self.graph_toolbar._set_image_for_button(widget)
+            for child in widget.winfo_children():
+                apply_theme(child)
+
+        apply_theme(self.graph_toolbar)
+
     @staticmethod
     def format_hover_frequency(frequency_hz: float) -> str:
         """Formata a frequência mostrada na leitura interativa."""
@@ -1719,9 +1899,10 @@ class BenaCCAApp(tk.Tk):
                 xy=(0, 0),
                 xytext=(14, 14),
                 textcoords="offset points",
+                color=self.COLORS["text"],
                 bbox={
                     "boxstyle": "round,pad=0.45",
-                    "facecolor": "white",
+                    "facecolor": self.COLORS["card_soft"],
                     "edgecolor": self.COLORS["line"],
                     "alpha": 0.96,
                 },
@@ -1743,7 +1924,7 @@ class BenaCCAApp(tk.Tk):
                     markersize=5,
                     linestyle="none",
                     color=color,
-                    markeredgecolor="white",
+                    markeredgecolor=self.COLORS["card"],
                     markeredgewidth=0.8,
                     zorder=19,
                 )[0]
