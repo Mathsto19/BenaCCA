@@ -1,0 +1,16 @@
+__pycache__/
+*.py[cod]
+.venv/
+venv/
+env/
+build/
+dist/
+relatorios/
+*.egg-info/
+*.spec
+*.log
+
+.agents/
+
+relatorio_benacca.pdf
+*_bode_temporario.png
