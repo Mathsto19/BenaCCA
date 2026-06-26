@@ -7,7 +7,7 @@ O programa calcula filtros passa-baixas e passa-altas, seleciona componentes
 comerciais, compara as respostas ideal e real em gráficos de Bode e gera um
 relatório técnico em PDF.
 
-![Interface do BenaCCA](<Documentação Acadêmica/Imagens/interface_benacca.png>)
+![Interface do BenaCCA](<Documentação Academica/Imagens/interface_benacca.png>)
 
 ## Sobre o projeto
 
@@ -28,7 +28,7 @@ respostas em uma interface única, sem depender de serviços externos.
 - consulta interativa dos pontos das curvas;
 - análise da frequência de corte e da tolerância dos componentes;
 - geração de relatório técnico em PDF;
-- interface desktop local em Tkinter.
+- interface desktop local em PyQt6.
 
 ## Compatibilidade
 
@@ -42,12 +42,12 @@ respostas em uma interface única, sem depender de serviços externos.
 BenaCCA/
 ├── Aplicativo/
 │   └── README.md
-├── Código Fonte/
+├── Codigo Fonte/
 │   ├── BenaCCA.py
 │   ├── executar_benacca.bat
 │   ├── requirements.txt
 │   └── README.md
-├── Documentação Acadêmica/
+├── Documentação Academica/
 │   ├── Imagens/
 │   ├── Enunciado - Projeto Final.pdf
 │   └── RELATORIO_ACADEMICO.md
@@ -60,7 +60,7 @@ BenaCCA/
 
 ### Código-fonte
 
-A pasta [`Código Fonte`](<Código Fonte/README.md>) contém o programa completo,
+A pasta [`Codigo Fonte`](<Codigo Fonte/README.md>) contém o programa completo,
 as dependências e as instruções para execução com Python.
 
 ### Aplicativo
@@ -75,7 +75,7 @@ O desenvolvimento original também foi apresentado como trabalho da disciplina
 de Circuitos de Corrente Alternada da UTFPR.
 
 O relatório exigido para a atividade foi preservado em
-[`RELATORIO_ACADEMICO.md`](<Documentação Acadêmica/RELATORIO_ACADEMICO.md>),
+[`RELATORIO_ACADEMICO.md`](<Documentação Academica/RELATORIO_ACADEMICO.md>),
 junto do enunciado e dos resultados usados na entrega.
 
 ## Executar pelo código-fonte
@@ -83,7 +83,7 @@ junto do enunciado e dos resultados usados na entrega.
 No PowerShell:
 
 ```powershell
-cd "Código Fonte"
+cd "Codigo Fonte"
 python -m pip install -r requirements.txt
 python BenaCCA.py
 ```
@@ -101,7 +101,7 @@ Também é possível abrir `executar_benacca.bat` dentro da mesma pasta.
 ## Tecnologias
 
 - Python 3.10 ou superior;
-- Tkinter;
+- PyQt6;
 - NumPy;
 - Matplotlib;
 - ReportLab.

@@ -11,9 +11,9 @@ Esta pasta contém a implementação completa do BenaCCA.
 
 ## Requisitos
 
-- Windows 10 ou Windows 11;
+- Windows, Linux ou macOS;
 - Python 3.10 ou superior;
-- suporte ao Tkinter.
+- PyQt6 (interface gráfica).
 
 ## Instalar as dependências
 
@@ -37,11 +37,12 @@ executar_benacca.bat
 
 ## Dependências
 
+- `PyQt6`: interface gráfica;
 - `numpy`: cálculos numéricos;
 - `matplotlib`: gráficos de Bode;
 - `reportlab`: geração de relatórios em PDF.
 
-O Tkinter faz parte da instalação padrão do Python para Windows.
+Todas as dependências são instaladas via `pip` (veja `requirements.txt`).
 
 ## Organização do arquivo principal
 
@@ -64,4 +65,4 @@ não precisam ser adicionados ao repositório.
 
 As fórmulas, os resultados do caso de `2 kHz / 8 Ω` e a análise crítica estão
 em
-[`RELATORIO_ACADEMICO.md`](<../Documentação Acadêmica/RELATORIO_ACADEMICO.md>).
+[`RELATORIO_ACADEMICO.md`](<../Documentação Academica/RELATORIO_ACADEMICO.md>).

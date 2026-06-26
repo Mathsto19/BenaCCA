@@ -1,0 +1,7 @@
+# Dependências instaladas via pip:
+#   pip install -r requirements.txt
+PyQt6>=6.6
+numpy>=2.0
+matplotlib>=3.9
+reportlab>=4.0
+

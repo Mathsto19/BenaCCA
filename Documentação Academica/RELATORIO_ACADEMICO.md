@@ -1,6 +1,6 @@
 # BenaCCA — Projeto de Crossover Passivo
 
-**Autor:** Matheus Augusto  
+**Autor:** Matheus Augusto de Paula OLiveira
 **Disciplina:** Circuitos de Corrente Alternada — CC44CP  
 **Professor:** Lucas Bernardo Zilch
 
@@ -55,6 +55,12 @@ Entrada ── C ──┬── Saída / R
               GND
 ```
 
+A aba **Circuito** desenha os dois esquemáticos com os valores já preenchidos e
+mostra, numa reta de valores, qual componente comercial foi escolhido em
+relação ao ideal:
+
+![Aba de circuito com os esquemáticos](Imagens/interface_circuito.png)
+
 As funções de transferência usadas no código são:
 
 ```text
@@ -80,6 +86,11 @@ C = 1 / (√2 R ωc)
 Com `fc = 2000 Hz` e `R = 8 Ω`, a frequência angular é
 `ωc = 12566,37 rad/s`.
 
+A aba **Metodologia e Equações** do próprio programa apresenta essas fórmulas
+já renderizadas:
+
+![Aba de metodologia com as equações](Imagens/interface_metodologia.png)
+
 ## Lógica do programa
 
 O funcionamento foi separado em blocos dentro do arquivo `BenaCCA.py`:
@@ -99,9 +110,9 @@ feitos em unidades do SI: henry, farad, ohm e hertz.
 
 ## Como executar
 
-É necessário ter Python 3.10 ou mais recente com suporte ao Tkinter.
+É necessário ter Python 3.10 ou mais recente com a biblioteca PyQt6.
 
-Dentro da pasta `Código Fonte`, instale as bibliotecas:
+Dentro da pasta `Codigo Fonte`, instale as bibliotecas:
 
 ```bash
 python -m pip install -r requirements.txt
@@ -153,6 +164,25 @@ As curvas azuis representam os valores ideais. As curvas laranjas tracejadas
 usam os componentes comerciais. A coluna da esquerda mostra a magnitude e a
 coluna da direita mostra a fase.
 
+## Resposta do sistema
+
+Além das respostas individuais, a aba **Resposta do Sistema** mostra a soma das
+duas vias e a divisão da faixa de áudio entre woofer e tweeter. Como um
+crossover de 2ª ordem deixa as vias 180° defasadas no corte, a soma em fase se
+cancela (curva tracejada); invertendo a polaridade do tweeter o sistema soma
+corretamente (curva clara), com o leve realce típico do Butterworth:
+
+![Resposta somada do sistema](Imagens/interface_sistema.png)
+
+## Análise detalhada
+
+A aba **Análise Detalhada** reúne os polos e zeros no plano s (os polos do
+Butterworth ficam sobre o círculo de raio `ωc`), a resposta ao degrau no
+domínio do tempo, a comparação entre componentes comerciais e ideais e
+indicadores do fator `Q` e do maior erro de magnitude:
+
+![Análise detalhada do projeto](Imagens/interface_analise.png)
+
 ## Análise crítica
 
 O maior erro ocorreu no indutor: o valor comercial ficou `8,92%` abaixo do
@@ -191,11 +221,11 @@ isso a resposta final precisa ser analisada antes da montagem.
 ```text
 .
 ├── Aplicativo/
-├── Código Fonte/
+├── Codigo Fonte/
 │   ├── BenaCCA.py
 │   ├── requirements.txt
 │   └── executar_benacca.bat
-├── Documentação Acadêmica/
+├── Documentação Academica/
 │   ├── RELATORIO_ACADEMICO.md
 │   ├── Enunciado - Projeto Final.pdf
 │   └── Imagens/

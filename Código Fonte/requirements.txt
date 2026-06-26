@@ -1,4 +1,0 @@
-numpy>=2.0
-matplotlib>=3.9
-reportlab>=4.0
-
