@@ -1,4 +1,4 @@
-# BenaCCA — Repositório Oficial
+# BenaCCA - Repositório Oficial
 
 O **BenaCCA** é um software desktop para dimensionamento e análise de
 crossovers passivos Butterworth de segunda ordem.
