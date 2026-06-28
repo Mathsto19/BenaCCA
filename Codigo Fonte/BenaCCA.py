@@ -1268,6 +1268,26 @@ def transfer_function_text(
     )
 
 
+def save_report_figure(
+    project: ProjectResult,
+    output_path: str | Path,
+    builder,
+    figsize: tuple[float, float],
+) -> Path:
+    """Salva uma das figuras do relatório em PNG temporário."""
+
+    output = Path(output_path)
+    output.parent.mkdir(parents=True, exist_ok=True)
+    figure = builder(project, figsize=figsize, theme="light")
+    figure.savefig(
+        output,
+        dpi=180,
+        bbox_inches="tight",
+        facecolor=figure.get_facecolor(),
+    )
+    return output
+
+
 def generate_report_pdf(
     project: ProjectResult,
     pdf_path: str | Path,
@@ -1282,17 +1302,45 @@ def generate_report_pdf(
     if pdf.suffix.lower() != ".pdf":
         pdf = pdf.with_suffix(".pdf")
     pdf.parent.mkdir(parents=True, exist_ok=True)
-    temporary_image = pdf.with_name(f".{pdf.stem}_bode_temporario.png")
+    temporary_images = {
+        "bode": pdf.with_name(f".{pdf.stem}_bode_temporario.png"),
+        "circuit": pdf.with_name(f".{pdf.stem}_circuito_temporario.png"),
+        "system": pdf.with_name(f".{pdf.stem}_sistema_temporario.png"),
+        "analysis": pdf.with_name(f".{pdf.stem}_analise_temporario.png"),
+    }
 
     try:
-        save_bode_figure(project, temporary_image)
-        generate_pdf(project, pdf, temporary_image)
+        save_bode_figure(project, temporary_images["bode"])
+        save_report_figure(
+            project,
+            temporary_images["circuit"],
+            build_schematic_figure,
+            (11.0, 7.0),
+        )
+        save_report_figure(
+            project,
+            temporary_images["system"],
+            build_system_figure,
+            (11.0, 7.0),
+        )
+        save_report_figure(
+            project,
+            temporary_images["analysis"],
+            build_analysis_figure,
+            (11.0, 7.5),
+        )
+        generate_pdf(project, pdf, temporary_images)
     finally:
-        temporary_image.unlink(missing_ok=True)
+        for temporary_image in temporary_images.values():
+            temporary_image.unlink(missing_ok=True)
     return pdf
 
 
-def generate_pdf(project: ProjectResult, output: Path, image_path: Path) -> None:
+def generate_pdf(
+    project: ProjectResult,
+    output: Path,
+    image_paths: dict[str, Path],
+) -> None:
     """Cria o relatório acadêmico em PDF."""
 
     styles = getSampleStyleSheet()
@@ -1326,6 +1374,26 @@ def generate_pdf(project: ProjectResult, output: Path, image_path: Path) -> None
             spaceAfter=7,
         )
     )
+    styles.add(
+        ParagraphStyle(
+            name="BenaSmall",
+            parent=styles["BodyText"],
+            fontSize=8.6,
+            leading=11.3,
+            spaceAfter=4,
+        )
+    )
+    styles.add(
+        ParagraphStyle(
+            name="BenaCaption",
+            parent=styles["Italic"],
+            fontSize=8.5,
+            leading=10.5,
+            textColor=colors.HexColor("#475569"),
+            alignment=TA_CENTER,
+            spaceAfter=8,
+        )
+    )
 
     document = SimpleDocTemplate(
         str(output),
@@ -1336,6 +1404,39 @@ def generate_pdf(project: ProjectResult, output: Path, image_path: Path) -> None
         bottomMargin=1.5 * cm,
         title="BenaCCA - Relatório de crossover passivo",
     )
+
+    def body(text: str) -> Paragraph:
+        return Paragraph(text, styles["BenaBody"])
+
+    def small(text: str) -> Paragraph:
+        return Paragraph(text, styles["BenaSmall"])
+
+    def caption(text: str) -> Paragraph:
+        return Paragraph(text, styles["BenaCaption"])
+
+    def table_style(has_header: bool = True) -> TableStyle:
+        commands = [
+            ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#94A3B8")),
+            ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
+            ("PADDING", (0, 0), (-1, -1), 6),
+        ]
+        if has_header:
+            commands.extend(
+                [
+                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#16324F")),
+                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
+                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
+                ]
+            )
+        return TableStyle(commands)
+
+    def trimmed_pt(value: float, decimals: int = 2) -> str:
+        return format_pt(value, decimals).rstrip("0").rstrip(",")
+
+    def commercial_values(values: np.ndarray, scale: float, unit: str) -> str:
+        return ", ".join(
+            f"{trimmed_pt(float(value) * scale)} {unit}" for value in values
+        )
 
     story = [
         Spacer(1, 1.2 * cm),
@@ -1369,31 +1470,133 @@ def generate_pdf(project: ProjectResult, output: Path, image_path: Path) -> None
         ),
         Spacer(1, 0.6 * cm),
         Paragraph("1. Apresentação do problema", styles["BenaHeading"]),
-        Paragraph(
+        body(
             "O projeto dimensiona um crossover passivo de duas vias. O filtro "
             "passa-baixas envia as baixas frequências ao woofer, enquanto o filtro "
-            "passa-altas envia as altas frequências ao tweeter.",
-            styles["BenaBody"],
+            "passa-altas envia as altas frequências ao tweeter. A transição foi "
+            "modelada com filtros Butterworth de segunda ordem, mantendo a resposta "
+            "suave ao redor da frequência de corte."
         ),
-        Paragraph("2. Metodologia", styles["BenaHeading"]),
-        Paragraph(
+        Paragraph("2. Checklist do enunciado", styles["BenaHeading"]),
+        Table(
+            [
+                ["Requisito", "Implementação no BenaCCA", "Status"],
+                [
+                    small("Receber frequência de corte e impedância da carga."),
+                    small(
+                        "Campos de entrada da interface e função "
+                        "calculate_project(cutoff_hz, load_ohm, tolerance_percent)."
+                    ),
+                    small("Atendido"),
+                ],
+                [
+                    small("Calcular valores ideais de L e C."),
+                    small(
+                        "Função ideal_components(), usando wc = 2*pi*fc, "
+                        "L = sqrt(2)R/wc e C = 1/(sqrt(2)Rwc)."
+                    ),
+                    small("Atendido"),
+                ],
+                [
+                    small("Sugerir componentes reais das tabelas comerciais."),
+                    small(
+                        "Listas COMMERCIAL_INDUCTORS_H e COMMERCIAL_CAPACITORS_F, "
+                        "com escolha pelo menor erro absoluto."
+                    ),
+                    small("Atendido"),
+                ],
+                [
+                    small("Gerar Bode comparativo ideal versus real."),
+                    small(
+                        "A função build_bode_figure() plota magnitude e fase para "
+                        "componentes ideais e comerciais."
+                    ),
+                    small("Atendido"),
+                ],
+                [
+                    small("Projetar LPF para woofer e HPF para tweeter."),
+                    small(
+                        "A função transfer_response() implementa as duas topologias "
+                        "passivas de segunda ordem."
+                    ),
+                    small("Atendido"),
+                ],
+                [
+                    small("Documentar lógica, resultados, análise crítica e conclusão."),
+                    small(
+                        "O repositório contém README, documentação acadêmica e este "
+                        "PDF gerado com metodologia, resultados e figuras."
+                    ),
+                    small("Atendido"),
+                ],
+            ],
+            colWidths=[4.6 * cm, 8.6 * cm, 2.1 * cm],
+            repeatRows=1,
+            style=table_style(),
+        ),
+        Paragraph("3. Bibliotecas e organização do código", styles["BenaHeading"]),
+        body(
+            "As bibliotecas ficam importadas no início do arquivo BenaCCA.py. "
+            "Abaixo dos imports, o código é dividido por blocos comentados com "
+            "linhas separadoras, como TABELAS DE COMPONENTES COMERCIAIS, CÁLCULOS "
+            "DO CROSSOVER, GRÁFICOS DE BODE, GRÁFICOS EXTRAS, RELATÓRIO PDF e "
+            "INTERFACE GRÁFICA."
+        ),
+        Table(
+            [
+                ["Biblioteca", "Uso no projeto"],
+                [small("PyQt6"), small("Constrói a interface gráfica desktop.")],
+                [
+                    small("NumPy"),
+                    small(
+                        "Executa cálculos numéricos, vetores de frequência, "
+                        "respostas complexas e busca do componente mais próximo."
+                    ),
+                ],
+                [
+                    small("Matplotlib"),
+                    small(
+                        "Gera os gráficos de Bode, circuito, resposta do sistema "
+                        "e análise detalhada."
+                    ),
+                ],
+                [
+                    small("ReportLab"),
+                    small("Monta e exporta este relatório técnico em PDF."),
+                ],
+                [
+                    small("pathlib, tempfile, shutil, os"),
+                    small(
+                        "Organizam caminhos, arquivos temporários e tarefas de "
+                        "apoio do sistema."
+                    ),
+                ],
+            ],
+            colWidths=[4.0 * cm, 11.2 * cm],
+            repeatRows=1,
+            style=table_style(),
+        ),
+        Paragraph("4. Metodologia", styles["BenaHeading"]),
+        body(
             "As duas seções utilizam a aproximação Butterworth de segunda ordem. "
             "No LPF, o indutor fica em série e o capacitor em paralelo com a carga. "
             "No HPF, o capacitor fica em série e o indutor em paralelo. As fórmulas "
-            "são L = sqrt(2)R/wc e C = 1/(sqrt(2)Rwc), com wc = 2*pi*fc.",
-            styles["BenaBody"],
+            "são L = sqrt(2)R/wc e C = 1/(sqrt(2)Rwc), com wc = 2*pi*fc."
         ),
-        Paragraph("Funções de transferência ideais:", styles["BenaBody"]),
-        Paragraph(
-            "<br/>".join(transfer_function_text(project, commercial=False)),
-            styles["BenaBody"],
+        body("Funções de transferência ideais:"),
+        body("<br/>".join(transfer_function_text(project, commercial=False))),
+        body("Funções com componentes comerciais:"),
+        body("<br/>".join(transfer_function_text(project, commercial=True))),
+        Paragraph("5. Valores comerciais permitidos", styles["BenaHeading"]),
+        body(
+            "Indutores usados na seleção: "
+            f"{commercial_values(COMMERCIAL_INDUCTORS_H, 1e3, 'mH')}."
         ),
-        Paragraph("Funções com componentes comerciais:", styles["BenaBody"]),
-        Paragraph(
-            "<br/>".join(transfer_function_text(project, commercial=True)),
-            styles["BenaBody"],
+        body(
+            "Capacitores usados na seleção: "
+            f"{commercial_values(COMMERCIAL_CAPACITORS_F, 1e6, 'uF')}."
         ),
-        Paragraph("3. Resultados dos componentes", styles["BenaHeading"]),
+        Paragraph("6. Resultados dos componentes", styles["BenaHeading"]),
     ]
 
     component_data = [
@@ -1406,23 +1609,12 @@ def generate_pdf(project: ProjectResult, output: Path, image_path: Path) -> None
             component_data,
             colWidths=[4.0 * cm, 2.0 * cm, 3.2 * cm, 3.2 * cm, 2.3 * cm],
             repeatRows=1,
-            style=TableStyle(
-                [
-                    ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#16324F")),
-                    ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                    ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                    ("BACKGROUND", (0, 1), (-1, -1), colors.HexColor("#F8FAFC")),
-                    ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#94A3B8")),
-                    ("ALIGN", (1, 0), (-1, -1), "CENTER"),
-                    ("VALIGN", (0, 0), (-1, -1), "MIDDLE"),
-                    ("PADDING", (0, 0), (-1, -1), 6),
-                ]
-            ),
+            style=table_style(),
         )
     )
     story.extend(
         [
-            Paragraph("4. Frequências e parâmetros reais", styles["BenaHeading"]),
+            Paragraph("7. Frequências e parâmetros reais", styles["BenaHeading"]),
             Table(
                 [
                     ["Parâmetro", "LPF / Woofer", "HPF / Tweeter"],
@@ -1459,34 +1651,68 @@ def generate_pdf(project: ProjectResult, output: Path, image_path: Path) -> None
                     ],
                 ],
                 colWidths=[5.2 * cm, 5.0 * cm, 5.0 * cm],
-                style=TableStyle(
-                    [
-                        ("BACKGROUND", (0, 0), (-1, 0), colors.HexColor("#16324F")),
-                        ("TEXTCOLOR", (0, 0), (-1, 0), colors.white),
-                        ("FONTNAME", (0, 0), (-1, 0), "Helvetica-Bold"),
-                        ("GRID", (0, 0), (-1, -1), 0.5, colors.HexColor("#94A3B8")),
-                        ("ALIGN", (1, 1), (-1, -1), "CENTER"),
-                        ("PADDING", (0, 0), (-1, -1), 6),
-                    ]
-                ),
+                style=table_style(),
             ),
             PageBreak(),
             Paragraph(
-                "5. Gráfico de Bode comparativo — Magnitude e Fase",
+                "8. Topologia e escolha dos componentes",
                 styles["BenaHeading"],
             ),
-            Image(str(image_path), width=17.0 * cm, height=9.8 * cm),
-            Paragraph("6. Análise crítica", styles["BenaHeading"]),
-            Paragraph(analysis_text(project), styles["BenaBody"]),
-            Paragraph("7. Conclusão", styles["BenaHeading"]),
+            body(
+                "A figura abaixo mostra os esquemáticos do LPF e do HPF, além da "
+                "posição do valor ideal e do valor comercial escolhido nas tabelas "
+                "permitidas pelo enunciado."
+            ),
+            Image(str(image_paths["circuit"]), width=17.0 * cm, height=10.8 * cm),
+            caption("Figura 1 - Circuitos e seleção de L e C."),
+            PageBreak(),
             Paragraph(
+                "9. Gráfico de Bode comparativo - Magnitude e fase",
+                styles["BenaHeading"],
+            ),
+            body(
+                "As curvas azuis representam o projeto ideal e as curvas laranjas "
+                "tracejadas representam o comportamento com os componentes "
+                "comerciais escolhidos."
+            ),
+            Image(str(image_paths["bode"]), width=17.0 * cm, height=9.8 * cm),
+            caption("Figura 2 - Bode comparativo ideal versus comercial."),
+            Paragraph("10. Resposta do sistema", styles["BenaHeading"]),
+            body(
+                "A soma das duas vias mostra a divisão de energia entre woofer e "
+                "tweeter. Como filtros de segunda ordem ficam defasados perto do "
+                "corte, a figura também mostra a soma com o tweeter invertido."
+            ),
+            Image(str(image_paths["system"]), width=17.0 * cm, height=10.8 * cm),
+            caption("Figura 3 - Resposta somada e faixa de atuação das vias."),
+            PageBreak(),
+            Paragraph(
+                "11. Análise detalhada",
+                styles["BenaHeading"],
+            ),
+            body(
+                "A análise detalhada registra polos e zeros, resposta ao degrau, "
+                "comparação percentual entre valores ideais e comerciais, fator Q "
+                "e maior erro de magnitude."
+            ),
+            Image(str(image_paths["analysis"]), width=17.0 * cm, height=11.6 * cm),
+            caption("Figura 4 - Polos, degrau, comparação de componentes e indicadores."),
+            Paragraph("12. Análise crítica", styles["BenaHeading"]),
+            body(analysis_text(project)),
+            Paragraph("13. Conclusão", styles["BenaHeading"]),
+            body(
                 "O projeto atende ao objetivo de dimensionar os dois filtros, "
                 "selecionar componentes disponíveis e quantificar o efeito da "
                 "substituição. O principal desafio prático é que os valores "
                 "comerciais não reproduzem exatamente o modelo teórico; por isso, "
                 "a engenharia exige avaliar tolerâncias, resposta dos transdutores "
-                "e medições do conjunto montado.",
-                styles["BenaBody"],
+                "e medições do conjunto montado."
+            ),
+            body(
+                "O modelo considera os alto-falantes como cargas resistivas de "
+                f"{format_pt(project.load_ohm, 2)} ohm. Em uma caixa real, a "
+                "impedância varia com a frequência; portanto, a validação final "
+                "depende de medição acústica e teste de escuta."
             ),
         ]
     )

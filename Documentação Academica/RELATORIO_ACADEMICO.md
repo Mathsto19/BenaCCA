@@ -1,8 +1,9 @@
 # BenaCCA — Projeto de Crossover Passivo
 
-**Autor:** Matheus Augusto de Paula OLiveira
+**Autor:** Matheus Augusto de Paula Oliveira  
 **Disciplina:** Circuitos de Corrente Alternada — CC44CP  
-**Professor:** Lucas Bernardo Zilch
+**Professor:** Lucas Bernardo Zilch  
+**Repositório:** [github.com/Mathsto19/BenaCCA](https://github.com/Mathsto19/BenaCCA)
 
 ## Apresentação do problema
 
@@ -10,10 +11,18 @@ Uma caixa de som de duas vias precisa separar o sinal que vai para cada
 alto-falante. O woofer deve receber as frequências baixas e o tweeter, as
 frequências altas. Essa separação é feita por um crossover.
 
-Neste trabalho foi desenvolvido um programa em Python para projetar um
-crossover passivo Butterworth de segunda ordem. A ferramenta calcula os
-componentes ideais, escolhe os valores comerciais permitidos pelo enunciado e
-compara as duas respostas por meio de gráficos de Bode.
+Neste trabalho desenvolvi um programa em Python para projetar um crossover
+passivo Butterworth de segunda ordem. A ferramenta calcula os componentes
+ideais, escolhe os valores comerciais permitidos pelo enunciado e compara as
+duas respostas por meio de gráficos de Bode.
+
+Além de atender às especificações da atividade, procurei aproximar o projeto da
+minha prática com desenvolvimento de software. Como já desenvolvo sistemas e
+costumo organizar meus projetos no GitHub, optei por entregar não apenas os
+cálculos finais, mas uma aplicação que valida entradas, mostra os resultados em
+interface gráfica e gera um relatório técnico. O repositório também permite
+acompanhar melhor a estrutura do código e a forma como a solução foi
+implementada.
 
 ![Tela principal do BenaCCA](Imagens/interface_benacca.png)
 
@@ -30,7 +39,7 @@ O projeto considera:
   tabelas do enunciado.
 
 O programa também permite testar outras frequências, impedâncias e tolerâncias,
-mas os resultados apresentados neste README usam o caso obrigatório de
+mas os resultados apresentados neste relatório usam o caso obrigatório de
 `2 kHz` e `8 Ω`.
 
 ## Modelagem dos filtros
@@ -108,6 +117,37 @@ O funcionamento foi separado em blocos dentro do arquivo `BenaCCA.py`:
 As tabelas comerciais ficam declaradas no início do código. Os cálculos são
 feitos em unidades do SI: henry, farad, ohm e hertz.
 
+## Bibliotecas e organização do código
+
+As bibliotecas usadas pelo programa ficam importadas no início do arquivo
+`BenaCCA.py`, antes dos blocos lógicos do projeto:
+
+- `PyQt6`: criação da interface gráfica desktop;
+- `NumPy`: cálculos numéricos, vetores de frequência e respostas complexas;
+- `Matplotlib`: geração dos gráficos de Bode, circuito, resposta do sistema e
+  análise detalhada;
+- `ReportLab`: montagem e exportação do relatório em PDF;
+- bibliotecas padrão como `pathlib`, `tempfile`, `os`, `shutil`, `dataclasses`
+  e `datetime`: organização de arquivos, dados e tarefas auxiliares.
+
+Depois dos imports, o código é dividido por marcadores comentados. Essa
+separação deixa claro onde fica cada parte da solução:
+
+```text
+TABELAS DE COMPONENTES COMERCIAIS
+ESTRUTURAS DE DADOS
+CÁLCULOS DO CROSSOVER
+GRÁFICOS DE BODE
+DESENHO DO ESQUEMÁTICO
+GRÁFICOS EXTRAS
+RELATÓRIO PDF
+INTERFACE GRÁFICA
+```
+
+Essa organização ajuda a mostrar que o código também faz parte da metodologia:
+as fórmulas, a escolha dos componentes, a geração dos gráficos e a exportação
+do relatório ficam em seções próprias e rastreáveis.
+
 ## Como executar
 
 É necessário ter Python 3.10 ou mais recente com a biblioteca PyQt6.
@@ -158,11 +198,11 @@ O fator de qualidade obtido com os componentes comerciais é `Q = 0,7285`.
 
 ## Gráfico de Bode
 
-![Comparação entre as respostas ideal e comercial](Imagens/bode_comparativo.png)
+Na aba **Bode: Magnitude e Fase**, as curvas azuis representam os valores
+ideais. As curvas laranjas tracejadas usam os componentes comerciais. A coluna
+da esquerda mostra a magnitude e a coluna da direita mostra a fase.
 
-As curvas azuis representam os valores ideais. As curvas laranjas tracejadas
-usam os componentes comerciais. A coluna da esquerda mostra a magnitude e a
-coluna da direita mostra a fase.
+![Comparação entre as respostas ideal e comercial](Imagens/bode_comparativo.png)
 
 ## Resposta do sistema
 
@@ -215,6 +255,12 @@ O principal desafio foi passar dos valores calculados para componentes que
 realmente existem. Essa etapa mostrou que um projeto não termina na fórmula:
 mesmo uma escolha comercial próxima pode alterar a frequência de corte, e por
 isso a resposta final precisa ser analisada antes da montagem.
+
+Do ponto de vista pessoal, o trabalho também foi uma oportunidade de unir o
+conteúdo de Circuitos de Corrente Alternada com minha experiência em
+desenvolvimento de software. Implementar os cálculos em uma aplicação me ajudou
+a conferir as equações, organizar os resultados e perceber melhor como pequenas
+diferenças nos componentes influenciam o comportamento final do crossover.
 
 ## Arquivos do repositório
 

@@ -18,6 +18,69 @@ enquanto o filtro passa-altas direciona as frequências maiores ao tweeter.
 A ferramenta reúne os cálculos, a seleção dos componentes e a análise das
 respostas em uma interface única, sem depender de serviços externos.
 
+## Objetivos e especificações acadêmicas
+
+O projeto atende ao caso obrigatório do enunciado:
+
+- filtro passa-baixas (LPF) Butterworth de 2ª ordem para o woofer;
+- filtro passa-altas (HPF) Butterworth de 2ª ordem para o tweeter;
+- frequência de corte de `2 kHz`;
+- carga resistiva de `8 ohm`;
+- seleção de indutores e capacitores exclusivamente a partir das tabelas
+  comerciais fornecidas.
+
+Embora a interface permita testar outros valores, os resultados de referência
+do trabalho usam `fc = 2000 Hz` e `R = 8 ohm`.
+
+## Funções de transferência e fórmulas
+
+As topologias implementadas usam o denominador comum:
+
+```text
+D(s) = R + Ls + RLCs²
+```
+
+Para o filtro passa-baixas:
+
+```text
+                 R
+H_LPF(s) = -----------------
+           R + Ls + RLCs²
+```
+
+Para o filtro passa-altas:
+
+```text
+               RLCs²
+H_HPF(s) = -----------------
+           R + Ls + RLCs²
+```
+
+Para uma resposta Butterworth de segunda ordem:
+
+```text
+wc = 2*pi*fc
+L = sqrt(2)R / wc
+C = 1 / (sqrt(2)Rwc)
+```
+
+## Lógica do programa
+
+O arquivo [`BenaCCA.py`](<Codigo Fonte/BenaCCA.py>) é dividido em seções
+comentadas. As bibliotecas ficam no início do arquivo e, em seguida, aparecem:
+
+1. tabelas de componentes comerciais;
+2. estruturas de dados;
+3. cálculos do crossover;
+4. gráficos de Bode;
+5. desenhos do circuito e análises extras;
+6. geração do relatório PDF;
+7. interface gráfica em PyQt6.
+
+O fluxo principal valida os parâmetros, calcula os valores ideais, busca o valor
+comercial mais próximo, calcula as respostas complexas dos filtros, localiza os
+pontos de `-3,01 dB`, plota as curvas e permite exportar um relatório em PDF.
+
 ## Principais recursos
 
 - cálculo dos valores ideais de indutância e capacitância;
@@ -97,6 +160,42 @@ Também é possível abrir `executar_benacca.bat` dentro da mesma pasta.
 3. Consulte os componentes e os desvios na aba **Resultados**.
 4. Abra **Bode: Magnitude e Fase** para comparar as curvas.
 5. Gere o relatório em PDF quando precisar registrar os resultados.
+
+## Resultados do caso obrigatório
+
+Para `2 kHz` e `8 ohm`, o programa calcula:
+
+| Componente | Valor ideal | Valor comercial | Diferença |
+|---|---:|---:|---:|
+| Indutor | `0,9003 mH` | `0,82 mH` | `8,92%` |
+| Capacitor | `7,0337 uF` | `6,8 uF` | `3,32%` |
+
+Com os componentes comerciais escolhidos:
+
+| Filtro | Corte ideal | Corte comercial | Desvio |
+|---|---:|---:|---:|
+| LPF / woofer | `2000 Hz` | `2193,9 Hz` | `+9,70%` |
+| HPF / tweeter | `2000 Hz` | `2070,6 Hz` | `+3,53%` |
+
+O fator de qualidade comercial fica em `Q = 0,7285`.
+
+![Bode comparativo](<Documentação Academica/Imagens/bode_comparativo.png>)
+
+## Análise crítica e conclusão
+
+A principal diferença vem do indutor, já que `0,82 mH` é o valor comercial mais
+próximo de `0,9003 mH` dentro da tabela exigida. Essa substituição desloca a
+frequência de corte, principalmente no LPF, e pode alterar a região de transição
+entre woofer e tweeter.
+
+O impacto audível depende dos alto-falantes reais, da caixa, do ambiente e das
+tolerâncias dos componentes. O modelo usado no projeto considera a carga como
+resistência constante de `8 ohm`, enquanto um alto-falante real tem impedância
+variável com a frequência.
+
+O objetivo do projeto foi atingido: os filtros foram dimensionados, os
+componentes comerciais foram escolhidos a partir das tabelas obrigatórias e a
+resposta ideal foi comparada com a resposta usando componentes reais.
 
 ## Tecnologias
 
