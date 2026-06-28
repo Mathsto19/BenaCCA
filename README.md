@@ -97,7 +97,7 @@ pontos de `-3,01 dB`, plota as curvas e permite exportar um relatório em PDF.
 
 | Sistema | Código-fonte | Aplicativo |
 |---|---|---|
-| Windows 10/11 | `BenaCCA.py` | Preparado para distribuição futura |
+| Windows 10/11 | `BenaCCA.py` | `Aplicativo/BenaCCA.exe` |
 
 ## Estrutura do repositório
 
@@ -128,9 +128,12 @@ as dependências e as instruções para execução com Python.
 
 ### Aplicativo
 
-A pasta [`Aplicativo`](Aplicativo/README.md) está reservada para a futura
-distribuição empacotada do BenaCCA para Windows. O executável não faz parte
-desta versão do repositório.
+A pasta [`Aplicativo`](Aplicativo/README.md) contém a versão empacotada do
+BenaCCA para Windows:
+
+```text
+Aplicativo/BenaCCA.exe
+```
 
 ### Documentação acadêmica
 
